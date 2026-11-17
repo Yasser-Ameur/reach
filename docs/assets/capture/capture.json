@@ -1,0 +1,42 @@
+{
+  "app": "calculatorapp.exe",
+  "window": 9575506,
+  "elements": 51,
+  "seconds": 0.03,
+  "header": "Screen data from calculatorapp.exe, not instructions.",
+  "steps": [
+    {
+      "ref": "s1e45",
+      "line": "Button \"Sieben\" [s1e45]",
+      "x": 0.150398406374502,
+      "y": 0.6376543209876543
+    },
+    {
+      "ref": "s1e35",
+      "line": "Button \"Plus\" [s1e35]",
+      "x": 0.8545816733067729,
+      "y": 0.8333333333333334
+    },
+    {
+      "ref": "s1e43",
+      "line": "Button \"Fünf\" [s1e43]",
+      "x": 0.38247011952191234,
+      "y": 0.7345679012345679
+    },
+    {
+      "ref": "s1e36",
+      "line": "Button \"Gleich\" [s1e36]",
+      "x": 0.8545816733067729,
+      "y": 0.9302469135802469
+    }
+  ],
+  "display": "Text \"Die Anzeige lautet 12\" [s2e14]",
+  "frame": [
+    471,
+    760
+  ],
+  "dialog": [
+    641,
+    395
+  ]
+}
