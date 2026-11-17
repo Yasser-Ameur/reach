@@ -110,18 +110,20 @@ class Overlay:
         hdc = user32.BeginPaint(hwnd, ctypes.byref(paint))
         user32.GetClientRect(hwnd, ctypes.byref(area))
         brush = gdi32.CreateSolidBrush(_ORANGE)
-        middle = area.right // 2
+        # The window spans every monitor; the label sits on the primary one.
+        middle = user32.GetSystemMetrics(0) // 2 - user32.GetSystemMetrics(76)
+        top = -user32.GetSystemMetrics(77)
         for box in (
             (0, 0, area.right, _BORDER),
             (0, area.bottom - _BORDER, area.right, area.bottom),
             (0, 0, _BORDER, area.bottom),
             (area.right - _BORDER, 0, area.right, area.bottom),
-            (middle - 300, 0, middle + 300, 34),
+            (middle - 300, top, middle + 300, top + 34),
         ):
             user32.FillRect(hdc, ctypes.byref(wintypes.RECT(*box)), brush)
         gdi32.SetBkMode(hdc, 1)  # TRANSPARENT
         gdi32.SetTextColor(hdc, 0x00FFFFFF)
-        label = wintypes.RECT(middle - 300, 0, middle + 300, 34)
+        label = wintypes.RECT(middle - 300, top, middle + 300, top + 34)
         user32.DrawTextW(hdc, _LABEL, -1, ctypes.byref(label), 0x25)  # centred, one line
         gdi32.DeleteObject(brush)
         user32.EndPaint(hwnd, ctypes.byref(paint))
@@ -156,10 +158,7 @@ class Overlay:
             "ReachOverlay",
             "",
             0x80000000,  # WS_POPUP
-            0,
-            0,
-            user32.GetSystemMetrics(0),
-            user32.GetSystemMetrics(1),
+            *(user32.GetSystemMetrics(index) for index in (76, 77, 78, 79)),  # all monitors
             None,
             None,
             instance,
