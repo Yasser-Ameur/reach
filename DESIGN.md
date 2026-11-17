@@ -66,7 +66,7 @@ Spacing steps: 4, 8, 12, 16, 24, 32, 48, 72, 112 px. Hairlines are 1 px `--line`
 :root { --container-max: 1120px; --gutter: 24px; --section-y: 112px; --focus-ring: 2px solid var(--accent); }
 ```
 
-Under 720 px the gutter is 16 px and `--section-y` is 72 px.
+Under 860 px the gutter is 16 px and `--section-y` is 72 px.
 
 ## Motif and mark
 
