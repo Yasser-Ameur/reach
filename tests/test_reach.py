@@ -173,7 +173,8 @@ def test_render_gives_refs_and_states() -> None:
         '  Edit "Body" [s1e3] value="line one line two" (focused)',
         "  Edit [s1e4]",
     ]
-    assert refs["s1e2"] == (10, 20, 30, 40)
+    assert refs["s1e2"].rect == (10, 20, 30, 40)
+    assert refs["s1e2"].label == 'Button "Save"'
     assert "Hidden" not in text
 
 
@@ -187,7 +188,9 @@ def test_render_truncates_at_the_limit() -> None:
     root = Node(role="List", name="l", children=[Node(role="Text", name=str(i)) for i in range(50)])
     text, refs = render(root, 1, limit=10)
     assert len(refs) == 10
-    assert text.splitlines()[-1] == "... truncated at 10 elements"
+    assert text.splitlines()[-1].startswith(
+        "... truncated at 10 elements. Call snapshot with find="
+    )
 
 
 def test_keys_parse() -> None:
@@ -211,3 +214,44 @@ def test_png_round_trips_pixels() -> None:
     assert struct.unpack(">II", data[16:24]) == (2, 1)
     idat = data[data.index(b"IDAT") + 4 : data.index(b"IEND") - 8]
     assert zlib.decompress(idat) == b"\x00" + bytes([0, 0, 255, 255, 0, 0])
+
+
+def test_find_keeps_matches_with_their_ancestors_and_reaches_out_of_view() -> None:
+    root = Node(
+        role="Window",
+        name="Files",
+        children=[
+            Node(role="Button", name="New"),
+            Node(
+                role="List",
+                name="Items",
+                children=[
+                    Node(role="ListItem", name="alpha.txt"),
+                    Node(role="ListItem", name="Report.docx", offscreen=True),
+                    Node(role="Edit", name="Rename", value="quarterly report"),
+                ],
+            ),
+        ],
+    )
+    text, refs = render(root, 4, find="REPORT")
+    assert text.splitlines() == [
+        'Window "Files" [s4e1]',
+        '  List "Items" [s4e2]',
+        '    ListItem "Report.docx" [s4e3] (out of view)',
+        '    Edit "Rename" [s4e4] value="quarterly report"',
+    ]
+    assert refs["s4e3"].offscreen
+    assert render(root, 5, find="nothing like this") == ("", {})
+
+
+def test_find_never_matches_a_password_value() -> None:
+    root = Node(role="Edit", name="Password", value="hunter2", password=True)
+    assert render(root, 1, find="hunter")[0] == ""
+
+
+def test_modifiers_are_modifiers_only() -> None:
+    assert keys.parse_modifiers("ctrl+shift") == [0x11, 0x10]
+    with pytest.raises(ValueError, match="only ctrl, shift and alt"):
+        keys.parse_modifiers("ctrl+a")
+    with pytest.raises(Refused):
+        keys.parse_modifiers("win")

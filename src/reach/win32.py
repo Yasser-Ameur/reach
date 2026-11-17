@@ -142,6 +142,7 @@ user32.SendInput.argtypes = [wintypes.UINT, ctypes.POINTER(_Input), ctypes.c_int
 _KEYUP, _UNICODE, _EXTENDEDKEY = 0x0002, 0x0004, 0x0001
 _BUTTONS = {"left": (0x0002, 0x0004), "right": (0x0008, 0x0010), "middle": (0x0020, 0x0040)}
 _WHEEL, _HWHEEL = 0x0800, 0x1000
+_DRAG_STEPS = 12
 _FRAME_HOST = "applicationframehost.exe"
 
 
@@ -267,9 +268,10 @@ def focus(hwnd: int) -> None:
         time.sleep(0.025)
 
 
-def _send(*inputs: _Input) -> None:
+def _send(*inputs: _Input, release: bool = False) -> None:
     # Checked at the last step, so the kill switch also stops a call already running.
-    if killed.is_set():
+    # Letting go of a key or a button is the one input still sent after it.
+    if killed.is_set() and not release:
         raise Refused("the kill switch was pressed. Restart the Reach server to continue.")
     array = (_Input * len(inputs))(*inputs)
     if user32.SendInput(len(inputs), array, ctypes.sizeof(_Input)) != len(inputs):
@@ -284,10 +286,56 @@ def _key(vk: int, flags: int, scan: int = 0) -> _Input:
     return _Input(type=1, u=_InputUnion(ki=_KeybdInput(wVk=vk, wScan=scan, dwFlags=flags)))
 
 
-def click(x: int, y: int, button: str, double: bool) -> None:
+def _at(x: int, y: int, flags: int = 0) -> _Input:
+    """A mouse event that carries its own position on the whole desktop, so it lands
+    there even if the owner's hand has pushed the pointer somewhere else."""
+    left, top, width, height = (user32.GetSystemMetrics(index) for index in (76, 77, 78, 79))
+    return _Input(
+        type=0,
+        u=_InputUnion(
+            mi=_MouseInput(
+                dx=round((x - left) * 65535 / max(width - 1, 1)),
+                dy=round((y - top) * 65535 / max(height - 1, 1)),
+                dwFlags=flags | 0x0001 | 0x8000 | 0x4000,  # move, absolute, virtual desktop
+            )
+        ),
+    )
+
+
+def move(x: int, y: int) -> None:
+    """Put the pointer somewhere and tell the app under it, which is what hover is."""
+    _send(_at(x, y))
+
+
+def click(x: int, y: int, button: str, double: bool, held: list[int]) -> None:
+    """Click with the keys in `held` down, as in ctrl+click. They always come back up."""
     down, up = _BUTTONS[button]
     user32.SetCursorPos(x, y)
-    _send(*[_mouse(down), _mouse(up)] * (2 if double else 1))
+    try:
+        _send(*[_key(vk, 0) for vk in held], *[_mouse(down), _mouse(up)] * (2 if double else 1))
+    finally:
+        if held:
+            _send(*[_key(vk, _KEYUP) for vk in reversed(held)], release=True)
+
+
+def drag(start: tuple[int, int], end: tuple[int, int]) -> None:
+    """Press the left button at `start`, travel to `end` in steps so the app sees a
+    drag and not a jump, and let go. The button always comes back up: at `end` when
+    the drag got there, and back at `start` when it was cut short, which drops nothing."""
+    down, up = _BUTTONS["left"]
+    arrived = False
+    _send(_at(*start, down))
+    try:
+        for step in range(1, _DRAG_STEPS + 1):
+            time.sleep(0.015)
+            move(
+                start[0] + (end[0] - start[0]) * step // _DRAG_STEPS,
+                start[1] + (end[1] - start[1]) * step // _DRAG_STEPS,
+            )
+        time.sleep(0.05)
+        arrived = True
+    finally:
+        _send(_at(*(end if arrived else start), up), release=True)
 
 
 def scroll(x: int, y: int, notches: int, horizontal: bool) -> None:

@@ -55,3 +55,11 @@ def parse(combo: str) -> list[int]:
     if (_CTRL in held and ord("V") in held) or (_SHIFT in held and _INSERT in held):
         raise Refused(f"{combo!r} pastes the clipboard, which may hold another app's data.")
     return codes
+
+
+def parse_modifiers(combo: str) -> list[int]:
+    """The keys held during a click, as in "ctrl" or "ctrl+shift". Modifiers only."""
+    codes = parse(combo)
+    if not set(codes) <= {_CTRL, _SHIFT, _ALT}:
+        raise ValueError(f"{combo!r}: only ctrl, shift and alt can be held during a click")
+    return codes

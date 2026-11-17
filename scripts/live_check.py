@@ -20,6 +20,7 @@ from reach.guard import Guard
 from reach.overlay import Overlay
 
 TEXT = "Reach was here: héllo ✓"
+TEST_KEY = 0x7B  # F12: the check has its own kill switch, Ctrl+Alt+F12
 
 
 def refused(call: object, *args: object) -> str:
@@ -39,7 +40,7 @@ def main() -> None:
     home = Path(tempfile.mkdtemp(prefix="reach-live-"))
     server.guard = Guard(home, lambda app: True, os.getpid())
     win32.killed = server.guard.killed
-    server.overlay = Overlay(server.guard.killed.set)
+    server.overlay = Overlay(server.guard.killed.set, key=TEST_KEY, shared="Local\\ReachLiveCheck")
     win32.init()
     server.overlay.start()
 
@@ -90,8 +91,27 @@ def main() -> None:
         assert "(focused)" in pressed, pressed
         print("click by screenshot pixels landed on the button")
 
+        # A drag across the text field selects what is in it; typing then replaces it.
+        server.drag(window, x=33, y=65, to_x=382, to_y=65)
+        after_drag = server.type_text(window, "dragged", then_snapshot=True)
+        assert 'value="dragged"' in after_drag, after_drag
+        print("drag selected the text, and the action returned the new tree")
+
+        # The same selection by click, then shift+click.
+        server.click(window, x=33, y=65)
+        server.click(window, x=382, y=65, modifiers="shift")
+        after_shift = server.type_text(window, "shifted", then_snapshot=True)
+        assert 'value="shifted"' in after_shift, after_shift
+        print("shift+click extended the selection")
+
+        found = server.snapshot(window, find="press")
+        assert '"Press"' in found, found
+        assert "Edit" not in found, found
+        assert server.hover(window, ref=ref_of(found, '"Press"')) == "hovering"
+        print("find kept only the match, and hover reached it")
+
         server.click(window, ref=ref_of(server.snapshot(window), "Edit"))
-        win32.send_keys([0x11, 0x12, 0x08])  # the real hotkey, Ctrl+Alt+Backspace
+        win32.send_keys([0x11, 0x12, TEST_KEY])  # a real hotkey press, on the check's own key
         time.sleep(0.3)
         print("after kill switch:", refused(server.snapshot, window))
         print("log lines:", len((home / "actions.jsonl").read_text("utf-8").splitlines()))

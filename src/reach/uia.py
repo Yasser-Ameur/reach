@@ -26,6 +26,8 @@ _ROLES = (  # noqa: SIM905
 # HasKeyboardFocus, Value.Value
 _PROPERTIES = (30003, 30005, 30001, 30010, 30019, 30022, 30008, 30045)
 
+_MAX_DEPTH = 64
+
 _thread = threading.local()
 _automation: Any = None
 
@@ -36,15 +38,21 @@ def _uia() -> Any:
         comtypes.CoInitializeEx(0)  # type: ignore[no-untyped-call]
         _thread.ready = True
     if _automation is None:
-        _automation = comtypes.client.CreateObject(_api.CUIAutomation, interface=_api.IUIAutomation)
+        _automation = comtypes.client.CreateObject(
+            _api.CUIAutomation8, interface=_api.IUIAutomation2
+        )
+        # A hung app must cost one failed call, not the whole server.
+        _automation.ConnectionTimeout = 2000
+        _automation.TransactionTimeout = 5000
     return _automation
 
 
-def _node(element: Any) -> Node:
+def _node(element: Any, depth: int = 0) -> Node:
     control_type = element.CachedControlType - 50000
     rect = element.CachedBoundingRectangle
     password = bool(element.CachedIsPassword)
-    children = element.GetCachedChildren()
+    # A provider can report a tree that never ends; no real window is this deep.
+    children = element.GetCachedChildren() if depth < _MAX_DEPTH else None
     return Node(
         role=_ROLES[control_type] if 0 <= control_type < len(_ROLES) else "Custom",
         name=element.CachedName or "",
@@ -56,7 +64,9 @@ def _node(element: Any) -> Node:
         password=password,
         offscreen=bool(element.CachedIsOffscreen),
         children=(
-            [_node(children.GetElement(i)) for i in range(children.Length)] if children else []
+            [_node(children.GetElement(i), depth + 1) for i in range(children.Length)]
+            if children
+            else []
         ),
     )
 
@@ -69,7 +79,10 @@ def snapshot(hwnd: int) -> Node:
         request.AddProperty(property_id)
     request.TreeScope = 7  # element, children, descendants
     request.TreeFilter = uia.ControlViewCondition
-    root = _node(uia.ElementFromHandleBuildCache(hwnd, request))
+    try:
+        root = _node(uia.ElementFromHandleBuildCache(hwnd, request))
+    except COMError as error:
+        raise OSError("the window did not answer in time, or it has closed") from error
     root.offscreen = False  # a window asked for by handle is always rendered
     return root
 
