@@ -4,7 +4,7 @@ Reach lets a developer hand Claude one Windows app at a time: Claude reads the a
 
 ## 1. Problem
 
-Claude Code and Claude desktop can drive a browser and a shell. They cannot drive a native Windows app: a settings pane, an installer, an IDE dialog, a game editor. The existing computer use route sends a screenshot per step, which costs image tokens on every turn and makes the model guess pixel coordinates.
+An MCP client gives Claude a shell and often a browser. A native Windows app, such as a settings pane, an installer, an IDE dialog or a game editor, is out of reach from there. Computer use driven by screenshots costs image tokens on every step and makes the model guess pixel coordinates, and it is rarely scoped to one app.
 
 Evidence is thin and stated as such: this is one developer's own need, seen in this workspace where Roblox Studio, the Android emulator and Comfy Desktop each needed a hand-written bridge. No interviews were run.
 
