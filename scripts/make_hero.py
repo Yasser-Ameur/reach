@@ -27,6 +27,7 @@ from pathlib import Path
 ASSETS = Path(__file__).resolve().parent.parent / "docs" / "assets"
 CAPTURE = ASSETS / "capture"
 FRAME_SIDE = 760
+TEST_KEY = 0x7B  # F12: the capture has its own kill switch, Ctrl+Alt+F12
 
 
 def capture() -> None:
@@ -39,7 +40,7 @@ def capture() -> None:
         Path(tempfile.mkdtemp(prefix="reach-hero-")), lambda app: True, os.getpid()
     )
     win32.killed = server.guard.killed
-    server.overlay = Overlay(server.guard.killed.set)
+    server.overlay = Overlay(server.guard.killed.set, key=TEST_KEY, shared="Local\\ReachLiveCheck")
     win32.init()
     server.overlay.start()
     CAPTURE.mkdir(parents=True, exist_ok=True)

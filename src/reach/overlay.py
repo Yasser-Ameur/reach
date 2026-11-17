@@ -12,6 +12,8 @@ _KEY_COLOUR = 0x00FF00FF  # painted nowhere else, so it becomes the transparent 
 _ORANGE = 0x00206CE0  # 0x00BBGGRR
 _BORDER = 6
 _HOLD_MS = 2000
+_WATCH_MS = 250
+_SHARED_KILL = "Local\\ReachKillSwitch"
 _WM_PAINT, _WM_TIMER, _WM_HOTKEY, _WM_SHOW = 0x000F, 0x0113, 0x0312, 0x8000
 
 _WNDPROC = ctypes.WINFUNCTYPE(
@@ -83,22 +85,49 @@ gdi32.CreateSolidBrush.argtypes = [wintypes.DWORD]
 gdi32.CreateSolidBrush.restype = HANDLE
 gdi32.SetBkMode.argtypes = [HANDLE, ctypes.c_int]
 gdi32.SetTextColor.argtypes = [HANDLE, wintypes.DWORD]
+kernel32.CreateFileMappingW.argtypes = [
+    HANDLE,
+    ctypes.c_void_p,
+    wintypes.DWORD,
+    wintypes.DWORD,
+    wintypes.DWORD,
+    wintypes.LPCWSTR,
+]
+kernel32.CreateFileMappingW.restype = HANDLE
+kernel32.MapViewOfFile.argtypes = [HANDLE, *[wintypes.DWORD] * 3, ctypes.c_size_t]
+kernel32.MapViewOfFile.restype = ctypes.c_void_p
+kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+kernel32.CreateMutexW.restype = HANDLE
+kernel32.OpenMutexW.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR]
+kernel32.OpenMutexW.restype = HANDLE
 kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
 kernel32.GetModuleHandleW.restype = HANDLE
 
 
 class Overlay:
-    def __init__(self, on_kill: Callable[[], None]) -> None:
+    def __init__(
+        self, on_kill: Callable[[], None], key: int = 0x08, shared: str = _SHARED_KILL
+    ) -> None:
+        # The key pressed with Ctrl+Alt, Backspace by default, and the name of the event
+        # servers share. The live checks pass their own pair so that they neither
+        # collide with a running server nor kill it.
         self._on_kill = on_kill
+        self._key = key
+        self._shared = shared
         self._ready = threading.Event()
         self._hotkey_ok = False
+        self._others = False  # another Reach server holds the hotkey
         self._thread_id = 0
 
     def start(self) -> None:
-        """Raises RuntimeError when the kill hotkey is taken: no kill switch, no server."""
+        """No kill switch, no server. The hotkey belongs to one process at a time, so
+        Reach servers share it: whichever holds it bumps a shared counter that all of
+        them watch, and the others keep trying to take the hotkey over in case the
+        holder exits. Raises RuntimeError when the hotkey is held by something that
+        is not Reach, because then nothing would deliver the kill."""
         threading.Thread(target=self._run, daemon=True, name="reach-overlay").start()
         self._ready.wait()
-        if not self._hotkey_ok:
+        if not self._hotkey_ok and not self._others:
             raise RuntimeError("Ctrl+Alt+Backspace is taken by another program; Reach will not run")
 
     def show(self) -> None:
@@ -130,8 +159,31 @@ class Overlay:
 
     def _run(self) -> None:
         self._thread_id = kernel32.GetCurrentThreadId()
-        # Ctrl+Alt, no auto repeat, Backspace.
-        self._hotkey_ok = bool(user32.RegisterHotKey(None, 1, 0x0001 | 0x0002 | 0x4000, 0x08))
+        # A counter of kill switch presses, in memory every Reach server maps. A server
+        # stops when the count moves past what it saw at start, so there is nothing to
+        # clear and a server started later is never stopped by an old press.
+        mapping = kernel32.CreateFileMappingW(HANDLE(-1), None, 0x04, 0, 8, self._shared)
+        view = kernel32.MapViewOfFile(mapping, 0x0006, 0, 0, 8) if mapping else None
+        if not view:  # the name is taken by something else: no shared switch, no server
+            self._ready.set()
+            return
+        presses = ctypes.c_longlong.from_address(view)
+        seen = presses.value
+        holder = self._shared + "Holder"
+
+        def take_hotkey() -> bool:  # Ctrl+Alt, no auto repeat, and the key
+            if not user32.RegisterHotKey(None, 1, 0x0001 | 0x0002 | 0x4000, self._key):
+                return False
+            kernel32.CreateMutexW(None, False, holder)  # kept open: marks a live holder
+            return True
+
+        self._hotkey_ok = take_hotkey()
+        if not self._hotkey_ok:
+            # Starting without the hotkey is safe only while a Reach server holds it.
+            live = kernel32.OpenMutexW(0x00100000, False, holder)  # SYNCHRONIZE
+            self._others = bool(live)
+            if live:
+                kernel32.CloseHandle(live)
 
         def wndproc(hwnd: int, message: int, wparam: int, lparam: int) -> int:
             if message == _WM_PAINT:
@@ -167,11 +219,19 @@ class Overlay:
         user32.SetLayeredWindowAttributes(hwnd, _KEY_COLOUR, 0, 1)  # LWA_COLORKEY
         self._ready.set()
 
+        user32.SetTimer(None, 0, _WATCH_MS, None)  # a thread timer: its messages have no window
         message = wintypes.MSG()
         while user32.GetMessageW(ctypes.byref(message), None, 0, 0) > 0:
             if message.message == _WM_HOTKEY:
+                presses.value += 1  # tell every other Reach server
                 self._on_kill()
                 user32.ShowWindow(hwnd, 0)
+            elif message.message == _WM_TIMER and not message.hWnd:
+                if not self._hotkey_ok:
+                    self._hotkey_ok = take_hotkey()  # the holder may have exited
+                if presses.value != seen:
+                    self._on_kill()
+                    user32.ShowWindow(hwnd, 0)
             elif message.message == _WM_SHOW:
                 user32.ShowWindow(hwnd, 4)  # SW_SHOWNOACTIVATE
                 user32.SetTimer(hwnd, 1, _HOLD_MS, None)
