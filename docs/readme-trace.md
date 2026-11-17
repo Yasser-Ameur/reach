@@ -39,7 +39,10 @@ One row per claim in README.md. A test name is in `tests/`; "run" means a comman
 
 | Claim | Source |
 |---|---|
-| Seven tools | stdio client run listed `windows, snapshot, screenshot, click, type_text, press_key, scroll` |
+| Nine tools, three marked read only | `test_reads_are_marked_read_only` lists them through the server |
+| `find` keeps matches with ancestors, out of view included, never a password value | `test_find_keeps_matches_with_their_ancestors_and_reaches_out_of_view`, `test_find_never_matches_a_password_value`; live check line "find kept only the match, and hover reached it" |
+| Click with keys held, hover, drag | `test_tool_click_holds_modifiers_and_logs_the_element`, `test_tool_hover_and_drag_check_every_point`; live check lines "drag selected the text" and "shift+click extended the selection" |
+| `then_snapshot` returns the new tree, after a short wait | `test_tool_action_can_return_the_new_tree`; `server.SETTLE`; live check line "the action returned the new tree" |
 | Title only for a granted app | `test_tool_windows_hides_titles_until_granted` |
 | 800 elements, 1568 pixels | `tree.LIMIT`, `server.MAX_SIDE`; `test_render_truncates_at_the_limit` for the cap |
 
@@ -56,12 +59,14 @@ One row per claim in README.md. A test name is in `tests/`; "run" means a comman
 | Uninspectable process refused | `test_uninspectable_refused`; an elevated window was NOT tried live |
 | App under the point, foreground app | `test_tool_click_checks_app_under_point`, `test_tool_keys_check_foreground`; deleting either check turned that test red in a mutation run |
 | Shell and paste combinations | `test_tool_shell_and_paste_combos_refused`; live check line "shell combo: Refused" |
+| A target that cannot be acted on is refused | `test_tool_never_clicks_what_cannot_be_clicked`, `test_tool_point_must_be_inside_the_screenshot_and_the_window` |
 | Old ref matches nothing | `test_tool_old_ref_is_refused`; live check line "stale ref: Refused: s1e2" |
 | Password field | `test_tool_password_focus_refuses_keys_and_keeps_text_out_of_log`, `test_password_value_redacted`; live check line "password field: Refused" |
 | Kill switch final, and stops typing in flight | live check sent the real hotkey, line "after kill switch: Refused"; `test_kill_stops_input_already_in_flight` |
-| Server does not start when the hotkey is taken | run: a second `reach.exe` beside a first exited with code 1 and "Ctrl+Alt+Backspace is taken by another program; Reach will not run" |
+| A held key or button is released first | `test_held_keys_come_back_up_even_when_the_click_fails`, `test_drag_lets_go_of_the_button_when_killed_midway` |
+| One press stops every Reach server; a non Reach holder blocks startup | `scripts/kill_switch_check.py` run: "two servers run side by side", "one press stopped both", "the survivor took the hotkey over and stopped", "a server started after the press runs", "a server refuses to start when the hotkey is not Reach's" |
 | Overlay appears during input and goes away after | seen during the live check and the Calculator run; not asserted by a test |
-| Every call logged | `test_tool_every_call_logged`; live check printed 16 log lines |
+| Every call logged | `test_tool_every_call_logged`; live check printed 23 log lines |
 
 ## Limits
 
@@ -71,7 +76,7 @@ One row per claim in README.md. A test name is in `tests/`; "run" means a comman
 | Files section: list of paths, one JSON line per call, key order | `guard.Guard.check` and `guard.Guard.log`; `test_tool_every_call_logged` reads the lines back. The two sample lines are examples, with real key order and a real refusal message |
 | Refusal messages in the table | each string is raised in `guard.py`, `keys.py`, `server.py` or `win32.py`; matched by the `match=` patterns in `tests/` |
 | Packaged path carries its version | `capture.json` app path seen in the probe: `...microsoft.windowscalculator_11.2607.0.0_x64__8wekyb3d8bbwe\calculatorapp.exe` |
-| One server at a time | the two server run above |
+| Other projects were read at source | `docs/PRIOR-ART.md`; five audit reports written the same day, each citing file and line in a clone |
 | Two apps driven; browsers, Electron, elevated, second monitor not tried | `scripts/live_check.py` and `scripts/make_hero.py` are the only live runs |
 | Eight modules | `docs/DESIGN.md`; `src/reach/` holds guard, tree, keys, png, win32, uia, overlay, server |
 
@@ -80,7 +85,7 @@ One row per claim in README.md. A test name is in `tests/`; "run" means a comman
 | Claim | Source |
 |---|---|
 | Gate commands | run on the final tree: ruff clean, mypy clean, pytest green |
-| `LIVE CHECK PASSED` | run after the last source change |
+| `LIVE CHECK PASSED` | run after the last source change, on its own kill key Ctrl+Alt+F12 |
 
 ## About box
 

@@ -59,12 +59,16 @@ Claude answers with `click(ref="s1e35")`. There are no image tokens and no guess
 | Tool | What it does |
 |---|---|
 | `windows` | Lists open windows as id, app and grant status. A title is shown only for an app you already allowed |
-| `snapshot` | One window as a tree of elements with refs, capped at 800 elements |
+| `snapshot` | One window as a tree of elements with refs, capped at 800 elements. `find` keeps only elements whose name or value contains a text, including ones scrolled out of view |
 | `screenshot` | A PNG of one window, long side at most 1568 pixels |
-| `click` | Clicks a ref, or x and y in the latest screenshot's pixels. Left, right, middle, double |
+| `click` | Clicks a ref, or x and y in the latest screenshot's pixels. Left, right, middle, double, and with `ctrl`, `shift` or `alt` held |
+| `hover` | Moves the pointer over a ref or a point without clicking |
+| `drag` | Presses on one ref or point, moves to another in the same window, releases |
 | `type_text` | Types Unicode text into the focused field |
 | `press_key` | One key or combination, such as `ctrl+s` |
 | `scroll` | Turns the wheel at a ref, a point, or the window centre |
+
+Every acting tool takes `then_snapshot`, which returns the new tree in the same call, and waits a moment for the app to react before it reports.
 
 ## The guard
 
@@ -77,9 +81,10 @@ Every tool call passes one check before it reads or acts. It refuses when:
 - **The process cannot be inspected.** That covers elevated apps and UAC prompts.
 - **The input would land elsewhere.** Before a click, Reach checks which app is under the point. Before a keystroke, which app holds the foreground.
 - **The keys would act outside the app.** The Windows key, Alt+Tab, Ctrl+Esc and Ctrl+Shift+Esc belong to the shell. Ctrl+V and Shift+Insert would carry in whatever another app copied.
+- **The target cannot be acted on.** A disabled element, one scrolled out of view, one with no area, a point outside the screenshot or outside the window: each is refused with the reason, and nothing is clicked.
 - **The ref is old.** A ref names its snapshot, as in `s3e12`, so one remembered from an earlier snapshot matches nothing.
 - **Focus is in a password field.** Reach will not type there, and a snapshot shows such a field as `[redacted]`.
-- **You pressed Ctrl+Alt+Backspace.** The kill switch is final for that run, and it is checked again before each keystroke, so it also stops text already being typed. If the hotkey is taken by another program, the server does not start.
+- **You pressed Ctrl+Alt+Backspace.** The kill switch is final for that run, and it is checked again before each keystroke, so it also stops text already being typed. A held key or mouse button is released first. One press stops every Reach server in your Windows session. If the hotkey is taken by a program that is not Reach, the server does not start.
 
 While Reach sends input, an orange border and a label naming the kill switch appear on screen, and go away once the input stops. Every call, allowed or refused, is one line in `~/.reach/actions.jsonl`.
 
@@ -112,11 +117,12 @@ A refused call returns an error that starts with `Refused:`. Claude is told thes
 | `this window's process cannot be inspected; it may run elevated` | Out of reach by design. Do that step yourself |
 | `the point belongs to <other app>` or `keyboard focus belongs to <other app>` | Another window is in the way. Move it and ask again |
 | `<ref> is not in the latest snapshot of this window` | Claude used an old ref. It takes a new snapshot and retries |
+| `<ref> (<element>) is disabled` or `is out of view` | The element cannot be clicked as it is. Claude scrolls or picks another route |
 | `keyboard focus is in a password field` | Type the password yourself, then let Claude continue |
 | `the kill switch was pressed` | Restart the server from your MCP client |
 | `another Reach call or an allow dialog is still open` | Answer the dialog, or wait for the running call |
 
-If the server does not start at all, another program holds Ctrl+Alt+Backspace, most often a second Reach.
+If the server does not start at all, a program that is not Reach holds Ctrl+Alt+Backspace.
 
 ## What it does not protect against
 
@@ -125,12 +131,13 @@ If the server does not start at all, another program holds Ctrl+Alt+Backspace, m
 - The check and the input are two steps. A window that grabs focus in the few milliseconds between them receives the input.
 - Paste through an app's own menu is not blocked, so the clipboard is not fully out of reach.
 - Typed text is kept in the action log in clear.
-- One server runs at a time. A second one fails to start, because the first owns the kill switch hotkey.
 - A grant names an executable path. A packaged app's path carries its version, so an update means one more dialog.
 
 The full list, with the test behind each control, is in [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md).
 
 ## What has and has not been tried
+
+Other projects in this space were read at source before this one was called done; what was taken and what was refused is in [docs/PRIOR-ART.md](docs/PRIOR-ART.md).
 
 Reach has driven two apps: a small native test window, and Windows Calculator, which is a packaged app hosted in a shared frame process. Browsers, Electron apps, elevated windows and a second monitor have not been tried. If a tree comes back thin, `screenshot` is the fallback, and an issue with the app's name is welcome.
 
@@ -156,7 +163,7 @@ The unit tests cover the guard and, against a fake desktop, the wiring of every 
 .venv\Scripts\python.exe scripts\live_check.py
 ```
 
-It opens a small test window, takes the mouse for a few seconds, presses the real kill switch and ends with `LIVE CHECK PASSED`. To record the picture at the top again, run `scripts\make_hero.py`, which drives Calculator and writes `docs/assets/hero.svg`.
+It opens a small test window, takes the mouse for a few seconds, presses a real kill switch on its own key so a running Reach is left alone, and ends with `LIVE CHECK PASSED`. `scripts\kill_switch_check.py` starts real servers and proves they share one kill switch. To record the picture at the top again, run `scripts\make_hero.py`, which drives Calculator and writes `docs/assets/hero.svg`.
 
 ## License
 

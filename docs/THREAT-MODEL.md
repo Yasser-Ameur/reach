@@ -67,6 +67,11 @@ Owner of every row: Yasser. Each mitigation names the test that holds it.
 | T17 | Allow dialog | S | The dialog takes focus while the owner is typing elsewhere and a stray Y grants the app | Mitigate: No is the default button, and a yes inside the first second is discarded and asked again (`test_a_yes_inside_the_first_second_is_not_believed`) |
 | T18 | Refs | T | A ref remembered from an older snapshot names a different element in the new one | Mitigate: refs carry the snapshot generation (`test_tool_old_ref_is_refused`) |
 
+| T19 | Tools to screen | D | A key or the mouse button stays down after a failed or killed action, and the owner's next input is altered | Mitigate: releases are sent in a `finally`, and are the one input allowed after the kill switch (`test_held_keys_come_back_up_even_when_the_click_fails`, `test_drag_lets_go_of_the_button_when_killed_midway`). A drag cut short lets go where it began, and a finished one at the checked end point even if the pointer was pushed (`test_drag_lets_go_at_the_end_point_it_was_checked_for`) |
+| T20 | Screen to model | D | A hung or hostile app never answers and stalls every call | Mitigate: UI Automation timeouts of 2 s to connect and 5 s per call, and a depth cap on the tree. Seen only as configuration, not exercised against a hung app, A8 |
+| T21 | Kill switch | D | A second server cannot register the hotkey and runs with no kill switch, or refuses to run | Mitigate: servers share one switch through a counter in shared memory, take the hotkey over when its holder exits, and start without the hotkey only while a live Reach holds it (`scripts/kill_switch_check.py`, run by hand) |
+| T22 | Tools to screen | E | A click on a disabled, hidden or stale element lands on whatever is there | Mitigate: refused before any input (`test_tool_never_clicks_what_cannot_be_clicked`, `test_tool_point_must_be_inside_the_screenshot_and_the_window`) |
+
 ## Accepted risks
 
 - A1. Injection through screen content cannot be detected by this layer. Review 2027-02-01.
@@ -75,3 +80,5 @@ Owner of every row: Yasser. Each mitigation names the test that holds it.
 - A4. The log keeps typed text so the audit is useful. Password fields never reach it. Review 2027-02-01.
 - A5. Dependencies are bounded to one major version (`comtypes>=1.4,<2`, `mcp>=2.3,<3`), with no lock file or hash pinning. Reviewed 2026-11-17 before going public; review again 2027-02-01.
 - A6. A granted app's Edit menu or context menu can still paste. Blocking it would mean reading every menu. Review 2027-02-01.
+- A8. The timeouts have not been tried against an app that really hangs. Review 2027-02-01.
+- A9. A local program that can open the shared kill counter can stop Reach. It can already do worse as the same user. Review 2027-02-01.

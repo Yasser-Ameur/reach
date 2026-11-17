@@ -42,6 +42,10 @@ Action
 - R5. `click` MUST accept either a ref from the latest snapshot or x and y in the latest screenshot's pixels, and MUST refuse a ref from an older snapshot. A ref carries its snapshot's generation, as in `s3e12`.
 - R6. `type_text` MUST send Unicode text to the granted foreground window, and `press_key` MUST send one combination such as `ctrl+s`, and MUST refuse the Windows key, task switching combinations and paste.
 - R7. `scroll` MUST scroll at a ref or a point by a signed number of wheel notches.
+- R17. `hover` MUST move the pointer over a ref or a point, `drag` MUST press, travel and release between two refs or points of one window, and `click` MUST accept ctrl, shift and alt held. A held key or button MUST be released whatever happens, the kill switch included.
+- R18. An acting tool MUST refuse a disabled element, one out of view, one with no area, and a point outside the latest screenshot or outside the window.
+- R19. `snapshot` MUST accept a text to find and then return only matching elements with their ancestors, those out of view included. It MUST NOT match a password value.
+- R20. A window that does not answer MUST fail one call within 5 seconds, not stall the server.
 
 Guard
 
@@ -51,7 +55,7 @@ Guard
 - R11. Reach MUST refuse an app whose process it cannot inspect, which covers elevated processes.
 - R12. Before any click or scroll, Reach MUST check the app under the target point, and before any keystroke the app holding the foreground. A mismatch with the named window is a refusal.
 - R13. `type_text` and `press_key` MUST refuse while keyboard focus is in a password element.
-- R14. Ctrl+Alt+Backspace MUST make every later tool call fail until the server restarts. If the hotkey cannot be registered the server MUST NOT start.
+- R14. Ctrl+Alt+Backspace MUST make every later tool call fail until the server restarts. Servers in one Windows session MUST share it: one press stops all of them. If the hotkey is held by a program that is not Reach the server MUST NOT start.
 - R15. Every tool call, allowed or refused, MUST append one JSON line to `~/.reach/actions.jsonl`.
 - R16. During input Reach SHOULD show a click-through overlay naming the kill switch, hidden two seconds after the last action.
 

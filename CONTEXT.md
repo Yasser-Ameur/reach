@@ -40,7 +40,7 @@ The click-through border and label drawn on screen during a Hold.
 Not: part of any screenshot Reach returns.
 
 ## Kill switch
-The global hotkey Ctrl+Alt+Backspace. Once pressed, every tool call is refused until the server restarts.
+The global hotkey Ctrl+Alt+Backspace. Once pressed, every tool call is refused until the server restarts. Every Reach server in the Windows session shares it: one press stops them all.
 Not: a pause. There is no resume.
 
 ## Action log
