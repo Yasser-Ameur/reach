@@ -20,7 +20,7 @@ class Node:
     focused: bool = False
     password: bool = False
     offscreen: bool = False
-    children: list["Node"] = field(default_factory=list)
+    children: list[Node] = field(default_factory=list)
 
 
 def _clip(text: str, limit: int) -> str:
