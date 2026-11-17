@@ -16,7 +16,7 @@ One row per claim in `site/index.html`. The page says nothing the README does no
 | read `docs/assets/capture/capture.json` | `elements` 51, `seconds` 0.03, `display` "Text "Die Anzeige lautet 12" [s2e14]" |
 | `python scripts/make_site.py` | "copied 6 captures to site/assets" |
 
-Not run again today: the Calculator capture, the live checks and `claude mcp add`. The first two take over the mouse, and the registration writes to the owner's client configuration. They rest on the runs quoted in `docs/readme-trace.md`.
+Not run again today: the Calculator capture, `scripts/live_check.py`, `scripts/kill_switch_check.py` and `claude mcp add`. The first three take over the mouse or the keyboard, and the registration writes to the owner's client configuration. They rest on the runs quoted in `docs/readme-trace.md`.
 
 The page describes Reach at commit `6d49d28`: nine tools and one kill switch shared by every server.
 
