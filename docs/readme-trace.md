@@ -25,6 +25,7 @@ One row per claim in README.md. A test name is in `tests/`; "run" means a comman
 | `claude mcp add reach -- py -m reach` | run after the push in a scratch folder, with the clean venv's python in place of `py`: "Added stdio MCP server", then `claude mcp get` reported "Status: Connected"; removed afterwards |
 | `py -m reach` starts the server | run after the push: an MCP client started `python -m reach` from the clean venv and listed the seven tools |
 | Python 3.14 or later | `pyproject.toml` `requires-python`; every gate ran on 3.14.x, no other version was tried |
+| The same run is on the landing page | `site/index.html`, deployed by the pages workflow; the URL was opened in a browser after the deploy and showed the recorded run, with no console errors |
 | gates badge, license badge | both URLs returned 200; `gh run list` showed the gates run on main "completed success"; the rendered page showed "gates passing" and "license MIT" |
 
 ## What Claude sees
@@ -92,7 +93,7 @@ One row per claim in README.md. A test name is in `tests/`; "run" means a comman
 | Field | Source |
 |---|---|
 | Description | README first sentence without "An" and the full stop |
-| Website | empty: no docs site, no demo, no published package |
+| Website | `https://yasser-ameur.github.io/reach/`, the landing page in `site/`; `gh api repos/Yasser-Ameur/reach --jq .homepage` returned that URL |
 | `mcp`, `mcp-server`, `model-context-protocol` | `pyproject.toml` dependency `mcp`; `server.py` `MCPServer` |
 | `computer-use`, `desktop-automation` | `win32.click`, `send_text`, `send_keys` |
 | `claude` | `server._ask` dialog text; README try-it |

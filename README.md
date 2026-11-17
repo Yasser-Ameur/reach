@@ -9,6 +9,8 @@ An MCP server that lets Claude read and drive one Windows app at a time, and not
 
 A real run against Windows Calculator, replayed once. The dialog, the window and every line of text were captured from it by [scripts/make_hero.py](scripts/make_hero.py). One thing is drawn: the click on Yes. The script answers the real dialog No and grants the app through its own test harness. The Windows it ran on is set to German, so the buttons read Sieben, Plus, Fünf and Gleich: Reach shows whatever names the app exposes.
 
+The same run, step by step, is on the [landing page](https://yasser-ameur.github.io/reach/).
+
 ## Try it
 
 Windows 11, Python 3.14 or later.
