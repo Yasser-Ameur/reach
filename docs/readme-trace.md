@@ -1,6 +1,6 @@
 # README trace (2026-11-17)
 
-One row per claim in README.md. A test name is in `tests/`; "run" means a command executed in the session that wrote the README. Rows marked AFTER PUSH can only be checked once the repository is public and are re-verified then.
+One row per claim in README.md. A test name is in `tests/`; "run" means a command executed in the session that wrote the README. Rows that depend on the public repository were run after the first push.
 
 ## Audit of the first README (commit 042bf90)
 
@@ -16,15 +16,16 @@ One row per claim in README.md. A test name is in `tests/`; "run" means a comman
 
 | Claim | Source |
 |---|---|
+| The animation plays on GitHub | the repository page was opened in a browser after the push and the hero was seen mid run |
 | The hero is a real Calculator run; dialog, window and text captured | `scripts/make_hero.py` run; it wrote `docs/assets/capture/` (five frames, `dialog.png`, `capture.json`) and prints "captured 5 frames, 51 elements in 0.03s: Text "Die Anzeige lautet 12" [s2e14]" |
-| "The owner said yes" in the hero | NOT captured: the script answers the real dialog No and grants through its own harness. The README caption says the dialog was captured, not the click |
+| "The owner said yes" in the hero | NOT captured: the script answers the real dialog No and grants through its own harness. The README caption says the click on Yes is drawn |
 | Windows set to German; names Sieben, Plus, Fünf, Gleich | `docs/assets/capture/capture.json`, `steps[].line` |
 | Hero size | 1000 by 590 units, 388 KB, 13 s, plays once: printed by `make_hero.py`; rendered in a browser and stepped at 2.95 s, 9.25 s and 13 s |
-| `py -m pip install git+https://github.com/Yasser-Ameur/reach` | AFTER PUSH |
-| `claude mcp add reach -- py -m reach` | Syntax from `claude mcp add --help` run; execution AFTER PUSH |
-| `py -m reach` starts the server | `src/reach/__main__.py`; AFTER PUSH from a fresh environment |
+| `py -m pip install git+https://github.com/Yasser-Ameur/reach` | run after the push in a clean venv: `pip show reach` gave "Version: 0.1.0, Requires: comtypes, mcp" |
+| `claude mcp add reach -- py -m reach` | run after the push in a scratch folder, with the clean venv's python in place of `py`: "Added stdio MCP server", then `claude mcp get` reported "Status: Connected"; removed afterwards |
+| `py -m reach` starts the server | run after the push: an MCP client started `python -m reach` from the clean venv and listed the seven tools |
 | Python 3.14 or later | `pyproject.toml` `requires-python`; every gate ran on 3.14.x, no other version was tried |
-| gates badge, license badge | AFTER PUSH |
+| gates badge, license badge | both URLs returned 200; `gh run list` showed the gates run on main "completed success"; the rendered page showed "gates passing" and "license MIT" |
 
 ## What Claude sees
 
@@ -39,9 +40,8 @@ One row per claim in README.md. A test name is in `tests/`; "run" means a comman
 | Claim | Source |
 |---|---|
 | Seven tools | stdio client run listed `windows, snapshot, screenshot, click, type_text, press_key, scroll` |
-| Title only for a granted app | `server.windows`; NOT asserted by a test |
+| Title only for a granted app | `test_tool_windows_hides_titles_until_granted` |
 | 800 elements, 1568 pixels | `tree.LIMIT`, `server.MAX_SIDE`; `test_render_truncates_at_the_limit` for the cap |
-| Nothing covering the window appears in a screenshot | `win32.capture` uses PrintWindow; the live check's PNG was opened and showed only the window |
 
 ## The guard
 
@@ -50,7 +50,8 @@ One row per claim in README.md. A test name is in `tests/`; "run" means a comman
 | Grant by path, title ignored | `test_grant_keyed_by_path` |
 | Revoke on the next call | `test_revoking_a_line_takes_effect_without_restart` |
 | No held until restart | `test_denial_cached` |
-| Yes inside one second discarded | `win32.ask`; NOT covered by a test, threat model A7 |
+| Yes inside one second discarded | `test_a_yes_inside_the_first_second_is_not_believed` |
+| The dialog warns for known shells | `test_allow_dialog_names_the_path_and_warns_for_shells` |
 | Own windows refused; no call during a dialog | `test_own_process_refused`, `test_pending_dialog_blocks_input` |
 | Uninspectable process refused | `test_uninspectable_refused`; an elevated window was NOT tried live |
 | App under the point, foreground app | `test_tool_click_checks_app_under_point`, `test_tool_keys_check_foreground`; deleting either check turned that test red in a mutation run |
@@ -59,14 +60,16 @@ One row per claim in README.md. A test name is in `tests/`; "run" means a comman
 | Password field | `test_tool_password_focus_refuses_keys_and_keeps_text_out_of_log`, `test_password_value_redacted`; live check line "password field: Refused" |
 | Kill switch final, and stops typing in flight | live check sent the real hotkey, line "after kill switch: Refused"; `test_kill_stops_input_already_in_flight` |
 | Server does not start when the hotkey is taken | run: a second `reach.exe` beside a first exited with code 1 and "Ctrl+Alt+Backspace is taken by another program; Reach will not run" |
-| Overlay and its two seconds | `overlay._HOLD_MS`; seen during the live check, not asserted |
+| Overlay appears during input and goes away after | seen during the live check and the Calculator run; not asserted by a test |
 | Every call logged | `test_tool_every_call_logged`; live check printed 16 log lines |
 
 ## Limits
 
 | Claim | Source |
 |---|---|
-| Menu paste still works | not tested; threat model A6 |
+| Menu paste is not blocked | no code path inspects menus; `keys.parse` refuses only the key combinations |
+| Files section: list of paths, one JSON line per call, key order | `guard.Guard.check` and `guard.Guard.log`; `test_tool_every_call_logged` reads the lines back. The two sample lines are examples, with real key order and a real refusal message |
+| Refusal messages in the table | each string is raised in `guard.py`, `keys.py`, `server.py` or `win32.py`; matched by the `match=` patterns in `tests/` |
 | Packaged path carries its version | `capture.json` app path seen in the probe: `...microsoft.windowscalculator_11.2607.0.0_x64__8wekyb3d8bbwe\calculatorapp.exe` |
 | One server at a time | the two server run above |
 | Two apps driven; browsers, Electron, elevated, second monitor not tried | `scripts/live_check.py` and `scripts/make_hero.py` are the only live runs |

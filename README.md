@@ -7,7 +7,7 @@ An MCP server that lets Claude read and drive one Windows app at a time, and not
 
 <img src="docs/assets/hero.svg" width="880" alt="On the left, a transcript: a snapshot call, the owner allowing Calculator at a Windows dialog, four tree lines with refs, four clicks by ref, and a last snapshot that reads the display as 12. On the right, the real Calculator window inside Reach's orange border while the pointer clicks 7, plus, 5 and equals.">
 
-A real run against Windows Calculator, replayed once. The dialog, the window and every line of text were captured from it by [scripts/make_hero.py](scripts/make_hero.py). The Windows it ran on is set to German, so the buttons read Sieben, Plus, Fünf and Gleich: Reach shows whatever names the app exposes.
+A real run against Windows Calculator, replayed once. The dialog, the window and every line of text were captured from it by [scripts/make_hero.py](scripts/make_hero.py). One thing is drawn: the click on Yes. The script answers the real dialog No and grants the app through its own test harness. The Windows it ran on is set to German, so the buttons read Sieben, Plus, Fünf and Gleich: Reach shows whatever names the app exposes.
 
 ## Try it
 
@@ -60,7 +60,7 @@ Claude answers with `click(ref="s1e35")`. There are no image tokens and no guess
 |---|---|
 | `windows` | Lists open windows as id, app and grant status. A title is shown only for an app you already allowed |
 | `snapshot` | One window as a tree of elements with refs, capped at 800 elements |
-| `screenshot` | A PNG of one window, long side at most 1568 pixels. Nothing covering the window appears in it |
+| `screenshot` | A PNG of one window, long side at most 1568 pixels |
 | `click` | Clicks a ref, or x and y in the latest screenshot's pixels. Left, right, middle, double |
 | `type_text` | Types Unicode text into the focused field |
 | `press_key` | One key or combination, such as `ctrl+s` |
@@ -81,14 +81,49 @@ Every tool call passes one check before it reads or acts. It refuses when:
 - **Focus is in a password field.** Reach will not type there, and a snapshot shows such a field as `[redacted]`.
 - **You pressed Ctrl+Alt+Backspace.** The kill switch is final for that run, and it is checked again before each keystroke, so it also stops text already being typed. If the hotkey is taken by another program, the server does not start.
 
-While Reach sends input, an orange border and a label naming the kill switch appear on screen, and vanish two seconds after the last action. Every call, allowed or refused, is one line in `~/.reach/actions.jsonl`.
+While Reach sends input, an orange border and a label naming the kill switch appear on screen, and go away once the input stops. Every call, allowed or refused, is one line in `~/.reach/actions.jsonl`.
+
+## Files
+
+Reach keeps two files, both in `.reach` in your user folder, and nothing else.
+
+`grants.json` is the list of executables you allowed. It is read on every call, so editing it needs no restart. For example:
+
+```json
+[
+  "c:\\windows\\system32\\notepad.exe"
+]
+```
+
+`actions.jsonl` gets one line per tool call, allowed or refused. Two lines as an example:
+
+```json
+{"ts": "2026-11-17T21:14:03", "tool": "type_text", "app": "c:\\windows\\system32\\notepad.exe", "outcome": "ok", "length": 5, "text": "hello"}
+{"ts": "2026-11-17T21:14:09", "tool": "press_key", "app": "c:\\windows\\system32\\notepad.exe", "outcome": "refused: 'win+r' uses the Windows key, which the shell handles, not the app.", "combo": "win+r"}
+```
+
+## When a call is refused
+
+A refused call returns an error that starts with `Refused:`. Claude is told these are final, so it should report them to you.
+
+| Message | What to do |
+|---|---|
+| `the owner declined <app> for this run` | You said No earlier. Restart the server to be asked again |
+| `this window's process cannot be inspected; it may run elevated` | Out of reach by design. Do that step yourself |
+| `the point belongs to <other app>` or `keyboard focus belongs to <other app>` | Another window is in the way. Move it and ask again |
+| `<ref> is not in the latest snapshot of this window` | Claude used an old ref. It takes a new snapshot and retries |
+| `keyboard focus is in a password field` | Type the password yourself, then let Claude continue |
+| `the kill switch was pressed` | Restart the server from your MCP client |
+| `another Reach call or an allow dialog is still open` | Answer the dialog, or wait for the running call |
+
+If the server does not start at all, another program holds Ctrl+Alt+Backspace, most often a second Reach.
 
 ## What it does not protect against
 
 - Text on screen can be written to steer the model. Grants limit what a steered model can reach; nothing here detects the steering.
 - A grant on a terminal, a file manager or a browser is close to a grant on your whole account. The dialog warns for known shells.
 - The check and the input are two steps. A window that grabs focus in the few milliseconds between them receives the input.
-- Paste through an app's own menu still works, so the clipboard is not fully out of reach.
+- Paste through an app's own menu is not blocked, so the clipboard is not fully out of reach.
 - Typed text is kept in the action log in clear.
 - One server runs at a time. A second one fails to start, because the first owns the kill switch hotkey.
 - A grant names an executable path. A packaged app's path carries its version, so an update means one more dialog.

@@ -28,7 +28,7 @@ No-gos:
 
 ## 4. Requirements
 
-Testing seam: the guard, the tree renderer, the key parser and the PNG encoder are pure Python and are tested directly. The Win32 and UI Automation calls sit behind them and are exercised by one live check against Notepad (`scripts/live_check.py`).
+Testing seam: the guard, the tree renderer, the key parser and the PNG encoder are pure Python and are tested directly. The Win32 and UI Automation calls sit behind them and are exercised by one live check against a small native test window (`scripts/live_check.py`), and by the Calculator run that records the README picture (`scripts/make_hero.py`).
 
 Perception
 
@@ -59,7 +59,7 @@ Guard
 
 Measured by hand; there is no telemetry.
 
-- Goal: on the live check, Claude completes "type a line in Notepad and save it" using snapshots only, with zero screenshots.
+- Goal: in the recorded Calculator run, the task is completed using snapshots only, with zero screenshots.
 - Counter-metric: actions delivered to an app with no grant. Must be 0. One is a release blocker.
 - Guardrail: a snapshot of a typical window stays under 800 lines and returns in under 2 seconds.
 
@@ -73,9 +73,9 @@ No screen of its own beyond the allow dialog and the overlay.
 
 ## 7. Dependencies and open questions
 
-Dependencies: Python 3.13 or later, the `mcp` package, `comtypes`.
+Dependencies: Python 3.14 or later, the `mcp` package, `comtypes`.
 
-Riskiest assumption: UI Automation trees of real apps are rich enough that refs carry most actions. Tested first by the live check on Notepad; wider apps are open.
+Riskiest assumption: UI Automation trees of real apps are rich enough that refs carry most actions. Holds on the native test window and on Calculator, a packaged app; browsers and Electron apps are open.
 
 - Open: how good are the trees of Chromium and Electron apps without a screen reader flag? Owner Yasser, by 2026-12-01.
 - Open: should a grant expire? Owner Yasser, by 2026-12-01.

@@ -64,15 +64,14 @@ Owner of every row: Yasser. Each mitigation names the test that holds it.
 
 | T15 | Tools to screen | E | A key combination the shell handles (Windows key, Alt+Tab, Ctrl+Esc, Ctrl+Shift+Esc) launches or switches to an app with no grant | Eliminate: the Windows key does not exist in the key table and the rest are refused (`test_tool_shell_and_paste_combos_refused`) |
 | T16 | Clipboard | I | The model pastes what another app copied, a password included, into a granted plain field and reads it back | Mitigate: Ctrl+V and Shift+Insert are refused (`test_tool_shell_and_paste_combos_refused`). A paste through the app's own menu remains, A6 |
-| T17 | Allow dialog | S | The dialog takes focus while the owner is typing elsewhere and a stray Y grants the app | Mitigate: No is the default button, and a yes inside the first second is discarded and asked again. Not covered by a test, A7 |
+| T17 | Allow dialog | S | The dialog takes focus while the owner is typing elsewhere and a stray Y grants the app | Mitigate: No is the default button, and a yes inside the first second is discarded and asked again (`test_a_yes_inside_the_first_second_is_not_believed`) |
 | T18 | Refs | T | A ref remembered from an older snapshot names a different element in the new one | Mitigate: refs carry the snapshot generation (`test_tool_old_ref_is_refused`) |
 
 ## Accepted risks
 
 - A1. Injection through screen content cannot be detected by this layer. Review 2027-02-01.
-- A2. A grant on a shell, editor or file manager lets the model change Reach's own files. The dialog warns for known shells. Review 2027-02-01.
+- A2. A grant on a shell, editor or file manager lets the model change Reach's own files. The dialog warns for known shells (`test_allow_dialog_names_the_path_and_warns_for_shells`). Review 2027-02-01.
 - A3. Check then act is two steps; a window appearing in the gap of a few milliseconds receives the input. Review 2027-02-01.
 - A4. The log keeps typed text so the audit is useful. Password fields never reach it. Review 2027-02-01.
 - A5. Dependencies are bounded to one major version (`comtypes>=1.4,<2`, `mcp>=2.3,<3`), with no lock file or hash pinning. Reviewed 2026-11-17 before going public; review again 2027-02-01.
 - A6. A granted app's Edit menu or context menu can still paste. Blocking it would mean reading every menu. Review 2027-02-01.
-- A7. The one second rule on the allow dialog lives in a Win32 call and has no automated test. Review 2027-02-01.
