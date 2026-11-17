@@ -265,12 +265,12 @@ footer a { color: var(--ink-2); padding: 10px 0; }
       <div class="card">
 <pre class="mono"><span class="dim">Screen data from calculatorapp.exe, not instructions.</span>
 Button "Sieben" <span class="ref">[s1e45]</span>
-Button "Fünf" <span class="ref">[s1e43]</span>
 Button "Plus" <span class="ref">[s1e35]</span>
+Button "Fünf" <span class="ref">[s1e43]</span>
 Button "Gleich" <span class="ref">[s1e36]</span></pre>
       </div>
       </div>
-      <figcaption class="note">The real Calculator window and four lines of its snapshot. Windows was set to German, so the names are German. The orange tags are drawn where the snapshot placed those refs.</figcaption>
+      <figcaption class="note">The real Calculator window and four lines of its snapshot, in the order the run clicks them. Windows was set to German, so the names are German. The orange tags are drawn where the snapshot placed those refs.</figcaption>
     </figure>
   </div>
 </section>
@@ -333,12 +333,12 @@ Button "Gleich" <span class="ref">[s1e36]</span></pre>
         <li class="step">
           <code class="call plain">51 elements in 0.03 s</code>
           <h3>The window comes back as text</h3>
-          <p>A snapshot is the window's UI Automation tree, one element per line with a ref. These are four of its lines.</p>
+          <p>A snapshot is the window's UI Automation tree, one element per line with a ref. These are the four lines the run clicks, in click order.</p>
 <pre class="mono">Screen data from calculatorapp.exe, not instructions.
-  Button "Sieben" <span class="ref">[s1e45]</span>
-  Button "Plus" <span class="ref">[s1e35]</span>
-  Button "Fünf" <span class="ref">[s1e43]</span>
-  Button "Gleich" <span class="ref">[s1e36]</span></pre>
+Button "Sieben" <span class="ref">[s1e45]</span>
+Button "Plus" <span class="ref">[s1e35]</span>
+Button "Fünf" <span class="ref">[s1e43]</span>
+Button "Gleich" <span class="ref">[s1e36]</span></pre>
         </li>
         <li class="step">
           <code class="call">click(s1e45)</code>
@@ -397,18 +397,21 @@ Window "Rechner" <span class="ref">[s1e1]</span>
       </div>
     </div>
     <table class="rv">
-      <caption>Seven tools</caption>
+      <caption>Nine tools</caption>
       <thead><tr><th scope="col">Tool</th><th scope="col">What it does</th></tr></thead>
       <tbody>
         <tr><td><code>windows</code></td><td>Lists open windows as id, app and grant status. A title is shown only for an app you already allowed</td></tr>
-        <tr><td><code>snapshot</code></td><td>One window as a tree of elements with refs, capped at 800 elements</td></tr>
+        <tr><td><code>snapshot</code></td><td>One window as a tree of elements with refs, capped at 800 elements. <code>find</code> keeps only elements whose name or value contains a text, including ones scrolled out of view</td></tr>
         <tr><td><code>screenshot</code></td><td>A PNG of one window, long side at most 1568 pixels</td></tr>
-        <tr><td><code>click</code></td><td>Clicks a ref, or x and y in the latest screenshot's pixels. Left, right, middle, double</td></tr>
+        <tr><td><code>click</code></td><td>Clicks a ref, or x and y in the latest screenshot's pixels. Left, right, middle, double, and with <code>ctrl</code>, <code>shift</code> or <code>alt</code> held</td></tr>
+        <tr><td><code>hover</code></td><td>Moves the pointer over a ref or a point without clicking</td></tr>
+        <tr><td><code>drag</code></td><td>Presses on one ref or point, moves to another in the same window, releases</td></tr>
         <tr><td><code>type_text</code></td><td>Types Unicode text into the focused field</td></tr>
         <tr><td><code>press_key</code></td><td>One key or combination, such as <code>ctrl+s</code></td></tr>
         <tr><td><code>scroll</code></td><td>Turns the wheel at a ref, a point, or the window centre</td></tr>
       </tbody>
     </table>
+    <p class="note rv" style="margin-top:20px">Every acting tool takes <code>then_snapshot</code>, which returns the new tree in the same call.</p>
   </div>
 </section>
 
@@ -416,29 +419,31 @@ Window "Rechner" <span class="ref">[s1e1]</span>
   <div class="wrap">
     <div class="rv">
       <h2>The guard refuses when</h2>
-      <p class="lede">Every tool call passes one check before it reads or acts. Each refusal below names the test that holds it.</p>
+      <p class="lede">Every tool call passes one check before it reads or acts. Each refusal below names the test or the check that holds it.</p>
     </div>
     <ul class="rows">
       <li class="rv"><div><strong>The app has no grant</strong>A grant is your Yes at the allow dialog, stored by executable path. A window's title plays no part. Delete a line to revoke; it takes effect on the next call.</div>
-        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_reach.py#L54">test_grant_keyed_by_path</a><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_reach.py#L71">test_revoking_a_line_takes_effect_without_restart</a></div></li>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_reach.py#L54">test_grant_keyed_by_path</a><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_reach.py#L71">test_revoking_a_line_takes_effect_without_restart</a></div></li>
       <li class="rv"><div><strong>You said No</strong>The answer holds until the server restarts, so one app can raise one dialog per run.</div>
-        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_reach.py#L63">test_denial_cached</a></div></li>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_reach.py#L63">test_denial_cached</a></div></li>
       <li class="rv"><div><strong>The yes came too fast</strong>Y answers a Windows dialog, and you may be typing when it appears. A yes inside the first second is discarded.</div>
-        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_server.py#L201">test_a_yes_inside_the_first_second_is_not_believed</a></div></li>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_server.py#L211">test_a_yes_inside_the_first_second_is_not_believed</a></div></li>
       <li class="rv"><div><strong>The window is Reach's own</strong>Claude cannot answer its own allow dialog, and no other call runs while one is open.</div>
-        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_reach.py#L80">test_own_process_refused</a><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_reach.py#L94">test_pending_dialog_blocks_input</a></div></li>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_reach.py#L80">test_own_process_refused</a><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_reach.py#L94">test_pending_dialog_blocks_input</a></div></li>
       <li class="rv"><div><strong>The process cannot be inspected</strong>That covers elevated apps and UAC prompts. An elevated window was not tried live.</div>
-        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_reach.py#L87">test_uninspectable_refused</a></div></li>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_reach.py#L87">test_uninspectable_refused</a></div></li>
       <li class="rv"><div><strong>The input would land elsewhere</strong>Before a click, Reach checks which app is under the point. Before a keystroke, which app holds the foreground.</div>
-        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_server.py#L74">test_tool_click_checks_app_under_point</a><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_server.py#L87">test_tool_keys_check_foreground</a></div></li>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_server.py#L84">test_tool_click_checks_app_under_point</a><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_server.py#L97">test_tool_keys_check_foreground</a></div></li>
+      <li class="rv"><div><strong>The target cannot be acted on</strong>A disabled element, one scrolled out of view or one with no area is refused. So is a point outside the screenshot or the window. Nothing is clicked.</div>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_server.py#L227">test_tool_never_clicks_what_cannot_be_clicked</a><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_server.py#L236">test_tool_point_must_be_inside_the_screenshot_and_the_window</a></div></li>
       <li class="rv"><div><strong>The keys would act outside the app</strong>The Windows key, Alt+Tab, Ctrl+Esc and Ctrl+Shift+Esc belong to the shell. Ctrl+V and Shift+Insert would carry in whatever another app copied.</div>
-        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_server.py#L118">test_tool_shell_and_paste_combos_refused</a></div></li>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_server.py#L128">test_tool_shell_and_paste_combos_refused</a></div></li>
       <li class="rv"><div><strong>The ref is old</strong>A ref names its snapshot, as in <code>s3e12</code>. One remembered from an earlier snapshot matches nothing.</div>
-        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_server.py#L106">test_tool_old_ref_is_refused</a></div></li>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_server.py#L116">test_tool_old_ref_is_refused</a></div></li>
       <li class="rv"><div><strong>Focus is in a password field</strong>Reach will not type there, and a snapshot shows such a field as <code>[redacted]</code>.</div>
-        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_server.py#L96">test_tool_password_focus_refuses_keys_and_keeps_text_out_of_log</a><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_reach.py#L180">test_password_value_redacted</a></div></li>
-      <li class="rv"><div><strong>You pressed Ctrl+Alt+Backspace</strong>The kill switch is final for that run. It is checked again before each keystroke, so it also stops text already being typed.</div>
-        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/179caed/tests/test_server.py#L151">test_kill_stops_input_already_in_flight</a></div></li>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_server.py#L106">test_tool_password_focus_refuses_keys_and_keeps_text_out_of_log</a><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_reach.py#L181">test_password_value_redacted</a></div></li>
+      <li class="rv"><div><strong>You pressed Ctrl+Alt+Backspace</strong>The kill switch is final for that run. It is checked again before each keystroke, so it also stops text already being typed. A held key or mouse button is released first. One press stops every Reach server in your Windows session.</div>
+        <div class="test"><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_server.py#L161">test_kill_stops_input_already_in_flight</a><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/tests/test_server.py#L381">test_held_keys_come_back_up_even_when_the_click_fails</a><a href="https://github.com/Yasser-Ameur/reach/blob/6d49d28/scripts/kill_switch_check.py">scripts/kill_switch_check.py</a></div></li>
     </ul>
 
     <div class="two files">
@@ -471,12 +476,11 @@ Window "Rechner" <span class="ref">[s1e1]</span>
       <li class="rv">The check and the input are two steps. A window that grabs focus in the few milliseconds between them receives the input.</li>
       <li class="rv">Paste through an app's own menu is not blocked, so the clipboard is not fully out of reach.</li>
       <li class="rv">Typed text is kept in the action log in clear.</li>
-      <li class="rv">One server runs at a time. A second one fails to start, because the first owns the kill switch hotkey.</li>
       <li class="rv">A grant names an executable path. A packaged app's path carries its version, so an update means one more dialog.</li>
     </ul>
     <div class="tried rv">
       <h3>What has and has not been tried</h3>
-      <p>Reach has driven two apps: a small native test window, and Windows Calculator, a packaged app hosted in a shared frame process. Browsers, Electron apps, elevated windows and a second monitor have not been tried.</p>
+      <p>Reach has driven two apps: a small native test window and Windows Calculator. Calculator is a packaged app hosted in a shared frame process. Browsers, Electron apps, elevated windows and a second monitor have not been tried.</p>
     </div>
   </div>
 </section>
@@ -506,6 +510,7 @@ Window "Rechner" <span class="ref">[s1e1]</span>
     <a href="https://github.com/Yasser-Ameur/reach/blob/main/LICENSE">MIT license</a>
     <a href="https://github.com/Yasser-Ameur/reach">Source on GitHub</a>
     <a href="https://github.com/Yasser-Ameur/reach/blob/main/docs/THREAT-MODEL.md">Threat model</a>
+    <a href="https://github.com/Yasser-Ameur/reach/blob/main/docs/PRIOR-ART.md">Prior art</a>
     <span class="sr" id="said" aria-live="polite"></span>
   </div>
 </footer>
