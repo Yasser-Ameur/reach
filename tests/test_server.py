@@ -161,3 +161,49 @@ def test_tool_half_a_point_is_an_error(desk: SimpleNamespace) -> None:
     with pytest.raises(ValueError, match="both x and y"):
         server.click(1, x=5)
     assert desk.sent == []
+
+
+def test_tool_windows_hides_titles_until_granted(
+    desk: SimpleNamespace, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    listed = [(1, "Untitled - Notepad"), (2, "Inbox: a private subject")]
+    monkeypatch.setattr(win32, "windows", lambda: listed)
+    before = server.windows()
+    assert "Untitled" not in before
+    assert "private" not in before
+    server.snapshot(1)  # the owner allows Notepad
+    after = server.windows()
+    assert "1  notepad.exe  granted  Untitled - Notepad" in after
+    assert "2  mail.exe  not granted" in after
+    assert "private" not in after
+
+
+def test_allow_dialog_names_the_path_and_warns_for_shells(monkeypatch: pytest.MonkeyPatch) -> None:
+    shown: list[str] = []
+    monkeypatch.setattr(win32, "ask", lambda text: shown.append(text) or False)
+    server._ask(App(path=r"c:\windows\system32\cmd.exe", pid=5))
+    server._ask(NOTEPAD)
+    assert r"c:\windows\system32\cmd.exe" in shown[0]
+    assert "whole account" in shown[0]
+    assert NOTEPAD.path in shown[1]
+    assert "whole account" not in shown[1]
+
+
+@pytest.mark.parametrize(
+    ("answers", "clock", "granted"),
+    [
+        ([6], [0.0, 2.5], True),  # a considered yes
+        ([6, 7], [0.0, 0.2, 5.0, 5.1], False),  # a stray Y, then the next stray key hits No
+        ([6, 6], [0.0, 0.2, 5.0, 8.0], True),  # a stray Y, then a real yes to the second box
+        ([7], [0.0, 3.0], False),
+    ],
+)
+def test_a_yes_inside_the_first_second_is_not_believed(
+    monkeypatch: pytest.MonkeyPatch, answers: list[int], clock: list[float], granted: bool
+) -> None:
+    boxes = iter(answers)
+    ticks = iter(clock)
+    monkeypatch.setattr(win32.user32, "MessageBoxW", lambda *args: next(boxes))
+    monkeypatch.setattr(win32.time, "monotonic", lambda: next(ticks))
+    assert win32.ask("Allow?") is granted
+    assert list(boxes) == []  # every box was shown
