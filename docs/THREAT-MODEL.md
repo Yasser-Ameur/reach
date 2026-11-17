@@ -73,6 +73,6 @@ Owner of every row: Yasser. Each mitigation names the test that holds it.
 - A2. A grant on a shell, editor or file manager lets the model change Reach's own files. The dialog warns for known shells. Review 2027-02-01.
 - A3. Check then act is two steps; a window appearing in the gap of a few milliseconds receives the input. Review 2027-02-01.
 - A4. The log keeps typed text so the audit is useful. Password fields never reach it. Review 2027-02-01.
-- A5. No lock file or hash pinning yet. Review before the repository goes public.
+- A5. Dependencies are bounded to one major version (`comtypes>=1.4,<2`, `mcp>=2.3,<3`), with no lock file or hash pinning. Reviewed 2026-11-17 before going public; review again 2027-02-01.
 - A6. A granted app's Edit menu or context menu can still paste. Blocking it would mean reading every menu. Review 2027-02-01.
 - A7. The one second rule on the allow dialog lives in a Win32 call and has no automated test. Review 2027-02-01.

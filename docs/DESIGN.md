@@ -6,7 +6,7 @@ One Python process speaking MCP over stdio. No daemon, no state beyond two files
 server.py    tool definitions; each tool is guard check, act, log
 guard.py     grants, denials, kill flag, action log. Pure Python
 tree.py      element tree to text with refs. Pure Python
-keys.py      "ctrl+s" to virtual key codes. Pure Python
+keys.py      "ctrl+s" to virtual key codes; refuses shell and paste combinations. Pure Python
 png.py       raw pixels to PNG with zlib. Pure Python
 win32.py     ctypes: windows, processes, SendInput, PrintWindow, MessageBox
 uia.py       comtypes: UI Automation tree and focus
